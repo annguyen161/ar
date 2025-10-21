@@ -73,6 +73,13 @@ function updateContentForMonth(month) {
   mv.setAttribute("ios-src", iosSrc);
   mv.setAttribute("alt", `BABY${month}M`);
 
+  // Lock rotation for month 9, enable for other months
+  if (month === 9) {
+    mv.removeAttribute("camera-controls");
+  } else {
+    mv.setAttribute("camera-controls", "");
+  }
+
   // Update audio source with lazy loading
   const audioSrc = `module/source/month${month}/voice${month}.MP3`;
   bgm.setAttribute("src", audioSrc);
@@ -218,7 +225,7 @@ function updateBannerText() {
   const bannerText = document.querySelector(".banner-text");
   if (bannerText) {
     bannerText.innerHTML = `
-      Mẹ khám phá TRỌN VẸN 9 THÁNG trưởng thành của con tại "đổi quà" nhé
+      Mẹ khám phá TRỌN VẸN 9 THÁNG trưởng thành của con tại "khám phá thêm" nhé
     `;
   }
 }
