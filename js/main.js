@@ -12,6 +12,7 @@ let firstAnim = null;
 let arActivated = false;
 let isModelLoaded = false;
 let isAudioLoaded = false;
+let arPositionInterval = null;
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -332,6 +333,41 @@ function hideVisitButtonForOneMinute() {
   }, 60000); // 60 seconds = 60000 milliseconds
 }
 
+// Function to start monitoring AR position
+function startARPositionMonitoring() {
+  if (arPositionInterval) {
+    clearInterval(arPositionInterval);
+  }
+
+  arPositionInterval = setInterval(() => {
+    if (mv.getAttribute("ar-status") === "session-started") {
+      // Keep model at center position in AR space
+      mv.setAttribute("position", "0 0 0");
+      mv.setAttribute("rotation", "0 0 0");
+      mv.setAttribute("scale", "0.2 0.2 0.2");
+
+      // Force model to stay at origin (center of AR space)
+      try {
+        const model = mv.querySelector("model-viewer");
+        if (model) {
+          model.setAttribute("position", "0 0 0");
+          model.setAttribute("rotation", "0 0 0");
+        }
+      } catch (e) {
+        // Ignore errors if model-viewer structure is different
+      }
+    }
+  }, 50); // Check every 50ms for more responsive positioning
+}
+
+// Function to stop monitoring AR position
+function stopARPositionMonitoring() {
+  if (arPositionInterval) {
+    clearInterval(arPositionInterval);
+    arPositionInterval = null;
+  }
+}
+
 // Start hiding the button when page loads
 hideVisitButtonForOneMinute();
 
@@ -347,8 +383,25 @@ customAR.addEventListener("click", async (event) => {
       return;
     }
 
+    // Set model position to be fixed in AR space
+    mv.setAttribute("ar-placement", "floor");
+    mv.setAttribute("ar-scale", "fixed");
+
+    // Position model at center of AR space
+    mv.setAttribute("position", "0 0 0");
+    mv.setAttribute("rotation", "0 0 0");
+
     await mv.activateAR();
     arActivated = true;
+
+    // After AR starts, ensure model stays centered
+    setTimeout(() => {
+      if (mv.getAttribute("ar-status") === "session-started") {
+        // Force model to stay at center position
+        mv.setAttribute("position", "0 0 0");
+        mv.setAttribute("rotation", "0 0 0");
+      }
+    }, 1000);
   } catch (err) {
     // Show error message if AR activation fails
     showARNotSupportedMessage();
@@ -423,6 +476,14 @@ mv.addEventListener("load", () => {
         mv.play();
       }
 
+      // Set up model positioning for AR
+      mv.setAttribute("position", "0 0 0");
+      mv.setAttribute("rotation", "0 0 0");
+      mv.setAttribute("scale", "0.2 0.2 0.2");
+
+      // Start monitoring and adjusting model position
+      startARPositionMonitoring();
+
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = true; // Enable audio looping in AR mode
@@ -446,6 +507,9 @@ mv.addEventListener("load", () => {
         }, 100);
       }
     } else if (event.detail.status === "not-presenting") {
+      // Stop monitoring when exiting AR
+      stopARPositionMonitoring();
+
       // Pause audio when exiting AR
       bgm.pause();
       bgm.currentTime = 0;

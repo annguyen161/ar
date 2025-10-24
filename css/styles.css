@@ -775,26 +775,19 @@ model-viewer[ar-status="session-started"] model-viewer {
   transform: translate(-50%, -50%) !important;
 }
 
-/* Overlay mode for model-viewer - always centered on screen */
-model-viewer {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: 300px !important;
-  height: 300px !important;
+/* AR Model positioning - keep model centered in AR space */
+model-viewer[ar-status="session-started"] {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
   z-index: 1000 !important;
-  pointer-events: none !important;
   background: transparent !important;
 }
 
-/* Ensure model content is centered */
-model-viewer canvas,
-model-viewer iframe {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
+/* Ensure model stays at center position in AR */
+model-viewer[ar-status="session-started"] model-viewer {
+  position: relative !important;
+  transform: none !important;
 }
 
 /* Lazy loading styles for model-viewer */
