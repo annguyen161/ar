@@ -268,14 +268,34 @@
       <div class="loading-text">Đang tải mô hình 3D...</div>
     </div>
 
+    <!-- Camera Container -->
+    <div id="camera-container" class="camera-container" style="display: none">
+      <video id="camera-video" autoplay muted playsinline></video>
+      <canvas id="camera-canvas"></canvas>
+
+      <!-- Model Overlay -->
+      <div id="model-overlay" class="model-overlay">
+        <model-viewer
+          id="mv"
+          src=""
+          ios-src=""
+          alt=""
+          scale="0.3 0.3 0.3"
+          camera-orbit="0deg 0deg 2m"
+          touch-action="pan-x pan-y"
+          loading="lazy"
+          reveal="auto"
+          style="opacity: 1; width: 200px; height: 200px"
+        >
+        </model-viewer>
+      </div>
+    </div>
+
+    <!-- Regular Model Viewer (hidden when camera is active) -->
     <model-viewer
-      id="mv"
+      id="mv-regular"
       src=""
       ios-src=""
-      ar
-      ar-modes="webxr quick-look"
-      ar-scale="auto"
-      ar-placement="wall"
       alt=""
       scale="0.3 0.3 0.3"
       camera-controls

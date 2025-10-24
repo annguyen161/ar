@@ -1,4 +1,5 @@
 const mv = document.getElementById("mv");
+const mvRegular = document.getElementById("mv-regular");
 const customAR = document.getElementById("customAR");
 const playAnimBtn = document.getElementById("playAnim");
 const bgm = document.getElementById("bgm");
@@ -6,6 +7,10 @@ const btnGroup = document.getElementById("btnGroup");
 const visitBtn = document.getElementById("visitBtn");
 const textBanner = document.querySelector(".text-banner");
 const modelLoading = document.getElementById("model-loading");
+const cameraContainer = document.getElementById("camera-container");
+const cameraVideo = document.getElementById("camera-video");
+const cameraCanvas = document.getElementById("camera-canvas");
+const modelOverlay = document.getElementById("model-overlay");
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 let firstAnim = null;
@@ -71,15 +76,22 @@ function updateContentForMonth(month) {
   const modelSrc = `module/source/month${month}/baby${month}.glb`;
   const iosSrc = `module/source/month${month}/baby${month}.usdz`;
 
+  // Update both model viewers
   mv.setAttribute("src", modelSrc);
   mv.setAttribute("ios-src", iosSrc);
   mv.setAttribute("alt", `BABY${month}M`);
 
+  mvRegular.setAttribute("src", modelSrc);
+  mvRegular.setAttribute("ios-src", iosSrc);
+  mvRegular.setAttribute("alt", `BABY${month}M`);
+
   // Lock rotation for month 9, enable for other months
   if (month === 9) {
     mv.removeAttribute("camera-controls");
+    mvRegular.removeAttribute("camera-controls");
   } else {
     mv.setAttribute("camera-controls", "");
+    mvRegular.setAttribute("camera-controls", "");
   }
 
   // Update audio source with lazy loading
@@ -106,20 +118,106 @@ function updateBannerTextForMonth(month) {
   }
 }
 
-// Function to apply screen-locked positioning
-function applyScreenLockedPositioning() {
-  if (!mv) return;
+// Function to start camera stream
+async function startCameraStream() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
 
-  // Add CSS class for screen-locked positioning
-  mv.style.position = "fixed";
-  mv.style.top = "50%";
-  mv.style.left = "50%";
-  mv.style.transform = "translate(-50%, -50%)";
-  mv.style.zIndex = "1000";
+    cameraVideo.srcObject = stream;
+    cameraContainer.style.display = "block";
 
-  // Ensure model stays in center of screen
-  mv.setAttribute("ar-placement", "screen");
-  mv.setAttribute("ar-scale", "fixed");
+    // Hide regular model viewer
+    mvRegular.style.display = "none";
+
+    return true;
+  } catch (error) {
+    console.error("Không thể truy cập camera:", error);
+    showCameraError();
+    return false;
+  }
+}
+
+// Function to stop camera stream
+function stopCameraStream() {
+  if (cameraVideo.srcObject) {
+    const tracks = cameraVideo.srcObject.getTracks();
+    tracks.forEach((track) => track.stop());
+    cameraVideo.srcObject = null;
+  }
+  cameraContainer.style.display = "none";
+  mvRegular.style.display = "block";
+}
+
+// Function to show camera error
+function showCameraError() {
+  const modal = document.createElement("div");
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    font-family: 'Nunito', sans-serif;
+  `;
+
+  const modalContent = document.createElement("div");
+  modalContent.style.cssText = `
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 350px;
+    margin: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  `;
+
+  const message = document.createElement("div");
+  message.style.cssText = `
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  `;
+  message.textContent =
+    "Không thể truy cập camera. Vui lòng cho phép quyền truy cập camera.";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.style.cssText = `
+    background: #FF6B6B;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  `;
+  closeBtn.textContent = "Đóng";
+  closeBtn.onmouseover = () => (closeBtn.style.background = "#FF5252");
+  closeBtn.onmouseout = () => (closeBtn.style.background = "#FF6B6B");
+
+  closeBtn.addEventListener("click", () => {
+    document.body.removeChild(modal);
+  });
+
+  modalContent.appendChild(message);
+  modalContent.appendChild(closeBtn);
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
 }
 
 // Function to check AR support
@@ -360,100 +458,26 @@ hideVisitButtonForOneMinute();
 customAR.addEventListener("click", async (event) => {
   event.preventDefault();
 
-  // Check AR support before activating
-  try {
-    const isARSupported = await checkARSupport();
+  if (cameraContainer.style.display === "block") {
+    // If camera is already active, stop it
+    stopCameraStream();
+    customAR.querySelector(".btn-icon").textContent = "Xem AR";
+    return;
+  }
 
-    if (!isARSupported) {
-      showARNotSupportedMessage();
-      return;
-    }
+  // Start camera stream
+  const cameraStarted = await startCameraStream();
 
-    await mv.activateAR();
+  if (cameraStarted) {
+    customAR.querySelector(".btn-icon").textContent = "Tắt Camera";
     arActivated = true;
-  } catch (err) {
-    // Show error message if AR activation fails
-    showARNotSupportedMessage();
-  }
 
-  if (isIOS && bgm.paused) {
-    bgm.pause();
-    bgm.currentTime = 0;
-    bgm.loop = true; // Enable audio looping on iOS AR
-    // Load audio if not already loaded
-    if (!isAudioLoaded) {
-      bgm.load();
-      bgm.addEventListener(
-        "canplaythrough",
-        () => {
-          bgm
-            .play()
-            .catch((err) =>
-              console.error("Không phát được nhạc trên iOS:", err)
-            );
-        },
-        { once: true }
-      );
-    } else {
-      setTimeout(() => {
-        bgm
-          .play()
-          .catch((err) => console.error("Không phát được nhạc trên iOS:", err));
-      }, 100);
-    }
-  }
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    bgm.pause();
-    bgm.currentTime = 0;
-  }
-});
-
-window.addEventListener("pagehide", () => {
-  bgm.pause();
-  bgm.currentTime = 0;
-});
-
-mv.addEventListener("load", () => {
-  const animations = mv.availableAnimations;
-  isModelLoaded = true;
-
-  // Hide loading indicator and show model
-  hideModelLoading();
-  mv.style.opacity = "1";
-  mv.classList.add("loaded");
-
-  if (animations && animations.length > 0) {
-    firstAnim = animations[0];
-    mv.animationName = firstAnim;
-    mv.animationLoop = true;
-    mv.pause();
-  } else {
-    console.log("Không tìm thấy animation trong mô hình.");
-  }
-
-  mv.addEventListener("ar-status", (event) => {
-    console.log("AR status:", event.detail.status);
-    if (event.detail.status === "session-started") {
-      arSession = true;
-
-      // Apply screen-locked positioning
-      applyScreenLockedPositioning();
-
-      // Start animation automatically when AR session starts
-      if (firstAnim) {
-        mv.animationName = firstAnim;
-        mv.animationLoop = true;
-        mv.currentTime = 0;
-        mv.play();
-      }
-
+    // Start audio
+    if (bgm.src) {
       bgm.pause();
       bgm.currentTime = 0;
-      bgm.loop = true; // Enable audio looping in AR mode
-      // Load audio if not already loaded
+      bgm.loop = true;
+
       if (!isAudioLoaded) {
         bgm.load();
         bgm.addEventListener(
@@ -472,44 +496,53 @@ mv.addEventListener("load", () => {
             .catch((err) => console.error("Không phát được nhạc:", err));
         }, 100);
       }
-    } else if (event.detail.status === "not-presenting") {
-      arSession = false;
-
-      // Reset positioning when exiting AR
-      mv.style.position = "";
-      mv.style.top = "";
-      mv.style.left = "";
-      mv.style.transform = "";
-      mv.style.zIndex = "";
-      mv.setAttribute("ar-placement", "wall");
-      mv.setAttribute("ar-scale", "auto");
-
-      // Pause audio when exiting AR
-      bgm.pause();
-      bgm.currentTime = 0;
-      bgm.loop = false; // Disable audio looping when exiting AR
-      mv.cameraOrbit = "0deg 0deg 2m";
-      // Reset play button state when exiting AR
-      isPlaying = false;
-      playAnimBtn.classList.remove("playing");
-      updatePlayButtonIcon();
-      showVisitButton();
     }
-  });
-
-  if (mv.getAttribute("ar-status") !== "session-started") {
-    mv.setAttribute("ar-status", "not-presenting");
   }
-
-  // Add skeleton loading to buttons initially
-  btnGroup.classList.add("loading");
-
-  // Remove skeleton loading and show buttons
-  setTimeout(() => {
-    btnGroup.classList.remove("loading");
-    btnGroup.classList.add("show");
-  }, 500);
 });
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    bgm.pause();
+    bgm.currentTime = 0;
+  }
+});
+
+window.addEventListener("pagehide", () => {
+  bgm.pause();
+  bgm.currentTime = 0;
+});
+
+// Handle model loading for both viewers
+function handleModelLoad(modelViewer) {
+  const animations = modelViewer.availableAnimations;
+  isModelLoaded = true;
+
+  // Hide loading indicator and show model
+  hideModelLoading();
+  modelViewer.style.opacity = "1";
+  modelViewer.classList.add("loaded");
+
+  if (animations && animations.length > 0) {
+    firstAnim = animations[0];
+    modelViewer.animationName = firstAnim;
+    modelViewer.animationLoop = true;
+    modelViewer.pause();
+  } else {
+    console.log("Không tìm thấy animation trong mô hình.");
+  }
+}
+
+mv.addEventListener("load", () => handleModelLoad(mv));
+mvRegular.addEventListener("load", () => handleModelLoad(mvRegular));
+
+// Add skeleton loading to buttons initially
+btnGroup.classList.add("loading");
+
+// Remove skeleton loading and show buttons
+setTimeout(() => {
+  btnGroup.classList.remove("loading");
+  btnGroup.classList.add("show");
+}, 500);
 
 function showVisitButton() {
   if (!visitBtn.classList.contains("show")) {
@@ -528,11 +561,14 @@ playAnimBtn.addEventListener("click", () => {
   }
 
   if (!isPlaying) {
-    // Play animation
-    mv.animationName = firstAnim;
-    mv.animationLoop = true;
-    mv.currentTime = 0;
-    mv.play();
+    // Play animation on both model viewers
+    const activeModel =
+      cameraContainer.style.display === "block" ? mv : mvRegular;
+
+    activeModel.animationName = firstAnim;
+    activeModel.animationLoop = true;
+    activeModel.currentTime = 0;
+    activeModel.play();
     isPlaying = true;
     playAnimBtn.classList.add("playing");
     updatePlayButtonIcon();
@@ -567,8 +603,11 @@ playAnimBtn.addEventListener("click", () => {
       }
     }
   } else {
-    // Pause animation
-    mv.pause();
+    // Pause animation on both model viewers
+    const activeModel =
+      cameraContainer.style.display === "block" ? mv : mvRegular;
+    activeModel.pause();
+
     // Pause music when animation is paused
     bgm.pause();
     bgm.loop = false; // Disable audio looping when paused
