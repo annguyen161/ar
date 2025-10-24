@@ -73,12 +73,8 @@ function updateContentForMonth(month) {
   mv.setAttribute("ios-src", iosSrc);
   mv.setAttribute("alt", `BABY${month}M`);
 
-  // Lock rotation for month 9, enable for other months
-  if (month === 9) {
-    mv.removeAttribute("camera-controls");
-  } else {
-    mv.setAttribute("camera-controls", "");
-  }
+  // Disable camera controls for all months to keep model centered
+  mv.removeAttribute("camera-controls");
 
   // Update audio source with lazy loading
   const audioSrc = `module/source/month${month}/voice${month}.MP3`;
@@ -454,7 +450,7 @@ mv.addEventListener("load", () => {
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = false; // Disable audio looping when exiting AR
-      mv.cameraOrbit = "45deg 90deg 2m";
+      // Keep model centered - no camera orbit changes
       // Reset play button state when exiting AR
       isPlaying = false;
       playAnimBtn.classList.remove("playing");
