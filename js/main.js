@@ -454,7 +454,7 @@ mv.addEventListener("load", () => {
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = false; // Disable audio looping when exiting AR
-      mv.cameraOrbit = "45deg 90deg 2m";
+      mv.cameraOrbit = "0deg 0deg 2m";
       // Reset play button state when exiting AR
       isPlaying = false;
       playAnimBtn.classList.remove("playing");
