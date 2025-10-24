@@ -8,10 +8,15 @@ const textBanner = document.querySelector(".text-banner");
 const modelLoading = document.getElementById("model-loading");
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+// Symbol to access model-viewer internals
+const $renderer = Symbol.for('renderer');
+
 let firstAnim = null;
 let arActivated = false;
 let isModelLoaded = false;
 let isAudioLoaded = false;
+let arSession = null;
+let followCameraInterval = null;
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -427,6 +432,9 @@ mv.addEventListener("load", () => {
         mv.play();
       }
 
+      // Start camera following for Android
+      startCameraFollowing();
+
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = true; // Enable audio looping in AR mode
@@ -450,6 +458,9 @@ mv.addEventListener("load", () => {
         }, 100);
       }
     } else if (event.detail.status === "not-presenting") {
+      // Stop camera following
+      stopCameraFollowing();
+      
       // Pause audio when exiting AR
       bgm.pause();
       bgm.currentTime = 0;
@@ -476,6 +487,179 @@ mv.addEventListener("load", () => {
     btnGroup.classList.add("show");
   }, 500);
 });
+
+// Function to make model follow camera in AR mode
+function startCameraFollowing() {
+  // Only enable for Android (WebXR)
+  if (isIOS) return;
+  
+  try {
+    // Access WebXR session through model-viewer
+    const modelViewerElement = mv;
+    
+    // Wait for the XR session to be available
+    const checkSession = () => {
+      const renderer = modelViewerElement[$renderer];
+      if (renderer && renderer.threeRenderer && renderer.threeRenderer.xr) {
+        const xr = renderer.threeRenderer.xr;
+        const session = xr.getSession();
+        
+        if (session) {
+          arSession = session;
+          setupXRCameraTracking(session, modelViewerElement);
+          return;
+        }
+      }
+      
+      // Retry after a short delay
+      if (arActivated && mv.getAttribute("ar-status") === "session-started") {
+        setTimeout(checkSession, 100);
+      }
+    };
+    
+    // Start checking for session
+    checkSession();
+    
+  } catch (error) {
+    console.log("WebXR session access error:", error);
+    // Fallback to simple camera tracking
+    startSimpleCameraFollowing();
+  }
+}
+
+// Fallback: Simple camera following without WebXR API
+function startSimpleCameraFollowing() {
+  let lastUpdate = 0;
+  const updateInterval = 50; // Update every 50ms
+  
+  function updateLoop(timestamp) {
+    if (!arActivated || mv.getAttribute("ar-status") !== "session-started") {
+      return;
+    }
+    
+    if (timestamp - lastUpdate >= updateInterval) {
+      try {
+        // Get camera orbit
+        const orbit = mv.getCameraOrbit();
+        
+        // Calculate position to keep model in view
+        // Model will appear to "float" in front of camera
+        const distance = 1.5; // meters
+        const heightOffset = -0.4; // meters below eye level
+        
+        // Convert orbit angles to position
+        const theta = (orbit.theta - 90) * Math.PI / 180;
+        const phi = orbit.phi * Math.PI / 180;
+        
+        const x = distance * Math.cos(phi) * Math.sin(theta);
+        const y = heightOffset;
+        const z = distance * Math.cos(phi) * Math.cos(theta);
+        
+        // Update camera target to create following effect
+        mv.cameraTarget = `${x}m ${y}m ${z}m`;
+        
+        lastUpdate = timestamp;
+      } catch (error) {
+        // Ignore errors
+      }
+    }
+    
+    followCameraInterval = requestAnimationFrame(updateLoop);
+  }
+  
+  followCameraInterval = requestAnimationFrame(updateLoop);
+}
+
+// Setup XR camera tracking with WebXR API
+function setupXRCameraTracking(session, modelViewerElement) {
+  const referenceSpace = session.requestReferenceSpace('local').then(refSpace => {
+    
+    function onXRFrame(time, frame) {
+      if (!arActivated || mv.getAttribute("ar-status") !== "session-started") {
+        return;
+      }
+      
+      try {
+        const pose = frame.getViewerPose(refSpace);
+        
+        if (pose) {
+          // Get camera position and orientation
+          const views = pose.views;
+          if (views.length > 0) {
+            const view = views[0];
+            const transform = view.transform;
+            
+            // Access the model scene
+            const scene = modelViewerElement.model;
+            if (scene && scene.position) {
+              // Position model in front of camera
+              const distance = 1.5; // meters in front
+              const heightOffset = -0.4; // meters
+              
+              // Get camera forward direction
+              const matrix = transform.matrix;
+              const forward = {
+                x: -matrix[8],
+                y: -matrix[9],
+                z: -matrix[10]
+              };
+              
+              // Calculate new position
+              const newX = transform.position.x + forward.x * distance;
+              const newY = transform.position.y + heightOffset;
+              const newZ = transform.position.z + forward.z * distance;
+              
+              // Update model position smoothly
+              scene.position.x += (newX - scene.position.x) * 0.1;
+              scene.position.y += (newY - scene.position.y) * 0.1;
+              scene.position.z += (newZ - scene.position.z) * 0.1;
+              
+              // Make model face camera
+              const dx = transform.position.x - scene.position.x;
+              const dz = transform.position.z - scene.position.z;
+              const targetRotation = Math.atan2(dx, dz);
+              
+              if (scene.rotation) {
+                scene.rotation.y = targetRotation;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Ignore frame errors
+      }
+      
+      // Continue animation loop
+      if (arActivated && mv.getAttribute("ar-status") === "session-started") {
+        session.requestAnimationFrame(onXRFrame);
+      }
+    }
+    
+    // Start animation loop
+    session.requestAnimationFrame(onXRFrame);
+  }).catch(error => {
+    console.log("Could not create reference space:", error);
+    // Fallback to simple tracking
+    startSimpleCameraFollowing();
+  });
+}
+
+// Function to stop camera following
+function stopCameraFollowing() {
+  if (followCameraInterval) {
+    cancelAnimationFrame(followCameraInterval);
+    followCameraInterval = null;
+  }
+  
+  arSession = null;
+  
+  // Reset camera target
+  try {
+    mv.cameraTarget = 'auto auto auto';
+  } catch (error) {
+    // Ignore errors
+  }
+}
 
 function showVisitButton() {
   if (!visitBtn.classList.contains("show")) {
