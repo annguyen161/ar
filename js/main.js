@@ -77,7 +77,7 @@ function updateContentForMonth(month) {
   mv.setAttribute("src", modelSrc);
   mv.setAttribute("ios-src", iosSrc);
   mv.setAttribute("alt", `BABY${month}M`);
-  
+
   mvRegular.setAttribute("src", modelSrc);
   mvRegular.setAttribute("ios-src", iosSrc);
   mvRegular.setAttribute("alt", `BABY${month}M`);
@@ -352,20 +352,20 @@ hideVisitButtonForOneMinute();
 async function startCameraOverlay() {
   try {
     // Request camera access
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        facingMode: 'user',
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
         width: { ideal: 1280 },
-        height: { ideal: 720 }
-      } 
+        height: { ideal: 720 },
+      },
     });
-    
+
     // Set video source
     cameraVideo.srcObject = stream;
-    
+
     // Show camera overlay
-    cameraOverlay.style.display = 'flex';
-    
+    cameraOverlay.style.display = "flex";
+
     // Start animation and audio
     if (firstAnim) {
       mv.animationName = firstAnim;
@@ -373,32 +373,37 @@ async function startCameraOverlay() {
       mv.currentTime = 0;
       mv.play();
     }
-    
+
     // Play audio
     if (bgm.src) {
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = true;
-      
+
       if (!isAudioLoaded) {
         bgm.load();
         bgm.addEventListener(
           "canplaythrough",
           () => {
-            bgm.play().catch((err) => console.error("Không phát được nhạc:", err));
+            bgm
+              .play()
+              .catch((err) => console.error("Không phát được nhạc:", err));
           },
           { once: true }
         );
       } else {
         setTimeout(() => {
-          bgm.play().catch((err) => console.error("Không phát được nhạc:", err));
+          bgm
+            .play()
+            .catch((err) => console.error("Không phát được nhạc:", err));
         }, 100);
       }
     }
-    
   } catch (err) {
     console.error("Không thể truy cập camera:", err);
-    alert("Không thể truy cập camera. Vui lòng cho phép quyền truy cập camera.");
+    alert(
+      "Không thể truy cập camera. Vui lòng cho phép quyền truy cập camera."
+    );
   }
 }
 
@@ -407,18 +412,18 @@ function closeCameraOverlay() {
   // Stop camera stream
   if (cameraVideo.srcObject) {
     const tracks = cameraVideo.srcObject.getTracks();
-    tracks.forEach(track => track.stop());
+    tracks.forEach((track) => track.stop());
     cameraVideo.srcObject = null;
   }
-  
+
   // Hide overlay
-  cameraOverlay.style.display = 'none';
-  
+  cameraOverlay.style.display = "none";
+
   // Pause audio
   bgm.pause();
   bgm.currentTime = 0;
   bgm.loop = false;
-  
+
   // Pause animation
   if (mv.animationName) {
     mv.pause();
@@ -467,7 +472,7 @@ mvRegular.addEventListener("load", () => {
 // Handle model loading for overlay viewer
 mv.addEventListener("load", () => {
   const animations = mv.availableAnimations;
-  
+
   if (animations && animations.length > 0) {
     firstAnim = animations[0];
     mv.animationName = firstAnim;
@@ -476,16 +481,14 @@ mv.addEventListener("load", () => {
   }
 });
 
+// Add skeleton loading to buttons initially
+btnGroup.classList.add("loading");
 
-  // Add skeleton loading to buttons initially
-  btnGroup.classList.add("loading");
-
-  // Remove skeleton loading and show buttons
-  setTimeout(() => {
-    btnGroup.classList.remove("loading");
-    btnGroup.classList.add("show");
-  }, 500);
-});
+// Remove skeleton loading and show buttons
+setTimeout(() => {
+  btnGroup.classList.remove("loading");
+  btnGroup.classList.add("show");
+}, 500);
 
 function showVisitButton() {
   if (!visitBtn.classList.contains("show")) {
