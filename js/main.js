@@ -225,7 +225,7 @@ function updateBannerText() {
   const bannerText = document.querySelector(".banner-text");
   if (bannerText) {
     bannerText.innerHTML = `
-      Mẹ khám phá TRỌN VẸN 9 THÁNG trưởng thành của con tại "khám phá thêm" nhé
+      Mẹ khám phá TRỌN VẸN 9 THÁNG trưởng thành của con tại "Khám phá thêm" nhé
     `;
   }
 }
