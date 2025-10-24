@@ -755,6 +755,26 @@ model-viewer {
   position: relative;
 }
 
+/* AR Overlay Mode - Fixed position on screen */
+model-viewer[ar-status="session-started"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 300px !important;
+  height: 300px !important;
+  z-index: 1000 !important;
+  pointer-events: none !important;
+}
+
+/* Ensure model stays centered during AR session */
+model-viewer[ar-status="session-started"] model-viewer {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
 /* Lazy loading styles for model-viewer */
 model-viewer[loading="lazy"] {
   opacity: 0;

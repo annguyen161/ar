@@ -419,6 +419,16 @@ mv.addEventListener("load", () => {
   mv.addEventListener("ar-status", (event) => {
     console.log("AR status:", event.detail.status);
     if (event.detail.status === "session-started") {
+      // Set AR overlay mode - model appears fixed on screen
+      mv.style.position = "fixed";
+      mv.style.top = "50%";
+      mv.style.left = "50%";
+      mv.style.transform = "translate(-50%, -50%)";
+      mv.style.width = "300px";
+      mv.style.height = "300px";
+      mv.style.zIndex = "1000";
+      mv.style.pointerEvents = "none";
+
       // Start animation automatically when AR session starts
       if (firstAnim) {
         mv.animationName = firstAnim;
@@ -450,11 +460,21 @@ mv.addEventListener("load", () => {
         }, 100);
       }
     } else if (event.detail.status === "not-presenting") {
+      // Reset model position when exiting AR
+      mv.style.position = "relative";
+      mv.style.top = "auto";
+      mv.style.left = "auto";
+      mv.style.transform = "none";
+      mv.style.width = "100%";
+      mv.style.height = "100%";
+      mv.style.zIndex = "5";
+      mv.style.pointerEvents = "auto";
+
       // Pause audio when exiting AR
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = false; // Disable audio looping when exiting AR
-      mv.cameraOrbit = "45deg 90deg 2m";
+      mv.cameraOrbit = "0deg 0deg 1.5m";
       // Reset play button state when exiting AR
       isPlaying = false;
       playAnimBtn.classList.remove("playing");
