@@ -342,47 +342,116 @@ hideVisitButtonForOneMinute();
 customAR.addEventListener("click", async (event) => {
   event.preventDefault();
 
-  // Check AR support before activating
+  // Mở camera thông thường thay vì AR
   try {
-    const isARSupported = await checkARSupport();
+    // Yêu cầu quyền truy cập camera
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    });
 
-    if (!isARSupported) {
-      showARNotSupportedMessage();
-      return;
-    }
+    // Tạo video element để hiển thị camera
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.muted = true;
+    video.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1000;
+    `;
 
-    await mv.activateAR();
-    arActivated = true;
-  } catch (err) {
-    // Show error message if AR activation fails
-    showARNotSupportedMessage();
-  }
+    // Đặt model ở trung tâm màn hình
+    mv.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      z-index: 1001;
+      opacity: 1;
+    `;
 
-  if (isIOS && bgm.paused) {
-    bgm.pause();
-    bgm.currentTime = 0;
-    bgm.loop = true; // Enable audio looping on iOS AR
-    // Load audio if not already loaded
-    if (!isAudioLoaded) {
-      bgm.load();
-      bgm.addEventListener(
-        "canplaythrough",
-        () => {
+    // Thêm video vào body
+    document.body.appendChild(video);
+
+    // Ẩn button khi camera đã mở
+    customAR.style.display = "none";
+
+    // Tạo button đóng camera
+    const closeCameraBtn = document.createElement("button");
+    closeCameraBtn.innerHTML = "Đóng Camera";
+    closeCameraBtn.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1002;
+      background: #FF6B6B;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    `;
+
+    closeCameraBtn.addEventListener("click", () => {
+      // Dừng stream camera
+      stream.getTracks().forEach((track) => track.stop());
+
+      // Xóa video và button
+      document.body.removeChild(video);
+      document.body.removeChild(closeCameraBtn);
+
+      // Khôi phục model về vị trí ban đầu
+      mv.style.cssText = `
+        opacity: 1;
+        transition: opacity 0.5s ease;
+      `;
+
+      // Hiện lại button
+      customAR.style.display = "block";
+    });
+
+    document.body.appendChild(closeCameraBtn);
+
+    // Phát nhạc khi mở camera
+    if (bgm.src) {
+      bgm.pause();
+      bgm.currentTime = 0;
+      bgm.loop = true;
+
+      if (!isAudioLoaded) {
+        bgm.load();
+        bgm.addEventListener(
+          "canplaythrough",
+          () => {
+            bgm
+              .play()
+              .catch((err) => console.error("Không phát được nhạc:", err));
+          },
+          { once: true }
+        );
+      } else {
+        setTimeout(() => {
           bgm
             .play()
-            .catch((err) =>
-              console.error("Không phát được nhạc trên iOS:", err)
-            );
-        },
-        { once: true }
-      );
-    } else {
-      setTimeout(() => {
-        bgm
-          .play()
-          .catch((err) => console.error("Không phát được nhạc trên iOS:", err));
-      }, 100);
+            .catch((err) => console.error("Không phát được nhạc:", err));
+        }, 100);
+      }
     }
+  } catch (err) {
+    console.error("Không thể mở camera:", err);
+    alert("Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.");
   }
 });
 
