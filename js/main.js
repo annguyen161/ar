@@ -1,6 +1,5 @@
 const mv = document.getElementById("mv");
 const customAR = document.getElementById("customAR");
-const overplayModel = document.getElementById("overplayModel");
 const playAnimBtn = document.getElementById("playAnim");
 const bgm = document.getElementById("bgm");
 const btnGroup = document.getElementById("btnGroup");
@@ -13,9 +12,6 @@ let firstAnim = null;
 let arActivated = false;
 let isModelLoaded = false;
 let isAudioLoaded = false;
-let cameraStream = null;
-let cameraOverlay = null;
-let isCameraActive = false;
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -145,296 +141,6 @@ function checkARSupport() {
 
   // Default to false for unsupported devices
   return Promise.resolve(false);
-}
-
-// Function to create camera overlay
-function createCameraOverlay() {
-  // Create overlay container
-  const overlay = document.createElement("div");
-  overlay.id = "camera-overlay";
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Nunito', sans-serif;
-  `;
-
-  // Create video element for camera
-  const video = document.createElement("video");
-  video.id = "camera-video";
-  video.style.cssText = `
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
-  `;
-  video.autoplay = true;
-  video.muted = true;
-  video.playsInline = true;
-
-  // Create 3D model container
-  const modelContainer = document.createElement("div");
-  modelContainer.id = "camera-model-container";
-  modelContainer.style.cssText = `
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 300px;
-    height: 300px;
-    z-index: 10001;
-    pointer-events: none;
-  `;
-
-  // Create model-viewer for baby
-  const babyModel = document.createElement("model-viewer");
-  babyModel.id = "camera-baby-model";
-  babyModel.style.cssText = `
-    width: 100%;
-    height: 100%;
-    background: transparent;
-  `;
-  babyModel.setAttribute("src", mv.getAttribute("src"));
-  babyModel.setAttribute("ios-src", mv.getAttribute("ios-src"));
-  babyModel.setAttribute("alt", mv.getAttribute("alt"));
-  babyModel.setAttribute("auto-rotate", "");
-  babyModel.setAttribute("camera-controls", "");
-  babyModel.setAttribute("touch-action", "pan-x pan-y");
-  babyModel.setAttribute("loading", "lazy");
-  babyModel.setAttribute("reveal", "auto");
-
-  // Create control panel
-  const controlPanel = document.createElement("div");
-  controlPanel.style.cssText = `
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 20px;
-    z-index: 10002;
-  `;
-
-  // Create close button
-  const closeBtn = document.createElement("button");
-  closeBtn.innerHTML = "✕";
-  closeBtn.style.cssText = `
-    background: rgba(255, 107, 107, 0.9);
-    color: white;
-    border: none;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  `;
-
-  // Create capture button
-  const captureBtn = document.createElement("button");
-  captureBtn.innerHTML = "📷";
-  captureBtn.style.cssText = `
-    background: rgba(76, 175, 80, 0.9);
-    color: white;
-    border: none;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  `;
-
-  // Create toggle animation button
-  const animBtn = document.createElement("button");
-  animBtn.innerHTML = "▶️";
-  animBtn.style.cssText = `
-    background: rgba(33, 150, 243, 0.9);
-    color: white;
-    border: none;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  `;
-
-  // Add hover effects
-  [closeBtn, captureBtn, animBtn].forEach((btn) => {
-    btn.addEventListener("mouseenter", () => {
-      btn.style.transform = "scale(1.1)";
-    });
-    btn.addEventListener("mouseleave", () => {
-      btn.style.transform = "scale(1)";
-    });
-  });
-
-  // Assemble overlay
-  modelContainer.appendChild(babyModel);
-  controlPanel.appendChild(closeBtn);
-  controlPanel.appendChild(captureBtn);
-  controlPanel.appendChild(animBtn);
-
-  overlay.appendChild(video);
-  overlay.appendChild(modelContainer);
-  overlay.appendChild(controlPanel);
-
-  return { overlay, video, babyModel, closeBtn, captureBtn, animBtn };
-}
-
-// Function to start camera
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "user",
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-    });
-    return stream;
-  } catch (error) {
-    console.error("Lỗi khi truy cập camera:", error);
-    throw error;
-  }
-}
-
-// Function to stop camera
-function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach((track) => track.stop());
-    cameraStream = null;
-  }
-}
-
-// Function to show camera overlay
-async function showCameraOverlay() {
-  try {
-    // Create overlay
-    const { overlay, video, babyModel, closeBtn, captureBtn, animBtn } =
-      createCameraOverlay();
-    cameraOverlay = overlay;
-
-    // Start camera
-    cameraStream = await startCamera();
-    video.srcObject = cameraStream;
-
-    // Add event listeners
-    closeBtn.addEventListener("click", closeCameraOverlay);
-
-    captureBtn.addEventListener("click", () => {
-      capturePhoto(video, babyModel);
-    });
-
-    let isAnimating = false;
-    animBtn.addEventListener("click", () => {
-      if (isAnimating) {
-        babyModel.pause();
-        animBtn.innerHTML = "▶️";
-        isAnimating = false;
-      } else {
-        if (firstAnim) {
-          babyModel.animationName = firstAnim;
-          babyModel.animationLoop = true;
-          babyModel.play();
-        }
-        animBtn.innerHTML = "⏸️";
-        isAnimating = true;
-      }
-    });
-
-    // Add to DOM
-    document.body.appendChild(overlay);
-    isCameraActive = true;
-
-    // Hide main content
-    document.body.style.overflow = "hidden";
-  } catch (error) {
-    console.error("Lỗi khi mở camera:", error);
-    alert(
-      "Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập camera."
-    );
-  }
-}
-
-// Function to close camera overlay
-function closeCameraOverlay() {
-  if (cameraOverlay) {
-    document.body.removeChild(cameraOverlay);
-    cameraOverlay = null;
-  }
-
-  stopCamera();
-  isCameraActive = false;
-
-  // Show main content
-  document.body.style.overflow = "auto";
-}
-
-// Function to capture photo
-function capturePhoto(video, model) {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  // Draw video frame
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // Create download link
-  const link = document.createElement("a");
-  link.download = `baby-photo-${Date.now()}.png`;
-  link.href = canvas.toDataURL();
-  link.click();
-
-  // Show success message
-  const message = document.createElement("div");
-  message.textContent = "Đã chụp ảnh thành công!";
-  message.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(76, 175, 80, 0.9);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 25px;
-    z-index: 10003;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 600;
-  `;
-
-  document.body.appendChild(message);
-  setTimeout(() => {
-    if (document.body.contains(message)) {
-      document.body.removeChild(message);
-    }
-  }, 2000);
 }
 
 // Function to show AR not supported message
@@ -633,18 +339,6 @@ function hideVisitButtonForOneMinute() {
 // Start hiding the button when page loads
 hideVisitButtonForOneMinute();
 
-// Event listener for "Xem em bé khi mở camera" button
-overplayModel.addEventListener("click", async (event) => {
-  event.preventDefault();
-
-  if (isCameraActive) {
-    closeCameraOverlay();
-    return;
-  }
-
-  await showCameraOverlay();
-});
-
 customAR.addEventListener("click", async (event) => {
   event.preventDefault();
 
@@ -696,25 +390,12 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     bgm.pause();
     bgm.currentTime = 0;
-  } else if (isCameraActive) {
-    // Close camera when page becomes hidden
-    closeCameraOverlay();
   }
 });
 
 window.addEventListener("pagehide", () => {
   bgm.pause();
   bgm.currentTime = 0;
-  if (isCameraActive) {
-    closeCameraOverlay();
-  }
-});
-
-// Handle page unload
-window.addEventListener("beforeunload", () => {
-  if (isCameraActive) {
-    closeCameraOverlay();
-  }
 });
 
 mv.addEventListener("load", () => {
