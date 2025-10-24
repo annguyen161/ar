@@ -12,6 +12,8 @@ let firstAnim = null;
 let arActivated = false;
 let isModelLoaded = false;
 let isAudioLoaded = false;
+let arSession = null;
+let modelPosition = { x: 0, y: 0, z: 0 };
 
 // Function to get URL parameters
 function getUrlParameter(name) {
@@ -102,6 +104,22 @@ function updateBannerTextForMonth(month) {
       tháng ${month}
     `;
   }
+}
+
+// Function to apply screen-locked positioning
+function applyScreenLockedPositioning() {
+  if (!mv) return;
+
+  // Add CSS class for screen-locked positioning
+  mv.style.position = "fixed";
+  mv.style.top = "50%";
+  mv.style.left = "50%";
+  mv.style.transform = "translate(-50%, -50%)";
+  mv.style.zIndex = "1000";
+
+  // Ensure model stays in center of screen
+  mv.setAttribute("ar-placement", "screen");
+  mv.setAttribute("ar-scale", "fixed");
 }
 
 // Function to check AR support
@@ -419,6 +437,11 @@ mv.addEventListener("load", () => {
   mv.addEventListener("ar-status", (event) => {
     console.log("AR status:", event.detail.status);
     if (event.detail.status === "session-started") {
+      arSession = true;
+
+      // Apply screen-locked positioning
+      applyScreenLockedPositioning();
+
       // Start animation automatically when AR session starts
       if (firstAnim) {
         mv.animationName = firstAnim;
@@ -450,6 +473,17 @@ mv.addEventListener("load", () => {
         }, 100);
       }
     } else if (event.detail.status === "not-presenting") {
+      arSession = false;
+
+      // Reset positioning when exiting AR
+      mv.style.position = "";
+      mv.style.top = "";
+      mv.style.left = "";
+      mv.style.transform = "";
+      mv.style.zIndex = "";
+      mv.setAttribute("ar-placement", "wall");
+      mv.setAttribute("ar-scale", "auto");
+
       // Pause audio when exiting AR
       bgm.pause();
       bgm.currentTime = 0;
