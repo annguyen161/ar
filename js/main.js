@@ -344,10 +344,10 @@ customAR.addEventListener("click", async (event) => {
 
   // Mở camera thông thường thay vì AR
   try {
-    // Yêu cầu quyền truy cập camera
+    // Yêu cầu quyền truy cập camera sau
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "user",
+        facingMode: { ideal: "environment" },
         width: { ideal: 1280 },
         height: { ideal: 720 },
       },
@@ -368,20 +368,31 @@ customAR.addEventListener("click", async (event) => {
       z-index: 1000;
     `;
 
-    // Đặt model ở trung tâm màn hình
+    // Đặt model ở trung tâm màn hình với kích thước lớn hơn
     mv.style.cssText = `
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 300px;
-      height: 300px;
+      width: 400px;
+      height: 400px;
       z-index: 1001;
       opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     `;
 
     // Thêm video vào body
     document.body.appendChild(video);
+
+    // Đảm bảo model được hiển thị và có animation
+    if (firstAnim) {
+      mv.animationName = firstAnim;
+      mv.animationLoop = true;
+      mv.currentTime = 0;
+      mv.play();
+    }
 
     // Ẩn button khi camera đã mở
     customAR.style.display = "none";
@@ -416,6 +427,13 @@ customAR.addEventListener("click", async (event) => {
       mv.style.cssText = `
         opacity: 1;
         transition: opacity 0.5s ease;
+        position: relative;
+        width: auto;
+        height: auto;
+        transform: none;
+        background: none;
+        border-radius: 0;
+        box-shadow: none;
       `;
 
       // Hiện lại button
