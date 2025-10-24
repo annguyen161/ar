@@ -427,6 +427,19 @@ mv.addEventListener("load", () => {
         mv.play();
       }
 
+      // Set fixed position for AR model to prevent it from moving with camera
+      setTimeout(() => {
+        // Lock the model position in AR space
+        mv.setAttribute("ar-persist", "true");
+        mv.setAttribute("ar-scale", "0.4 0.4 0.4");
+
+        // Try to anchor the model to a fixed position
+        if (mv.model) {
+          // Set a fixed transform to keep the model in place
+          mv.model.matrixAutoUpdate = false;
+        }
+      }, 1000);
+
       bgm.pause();
       bgm.currentTime = 0;
       bgm.loop = true; // Enable audio looping in AR mode
