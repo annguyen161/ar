@@ -123,7 +123,7 @@ async function startCameraStream() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "user",
+        facingMode: "environment",
         width: { ideal: 1280 },
         height: { ideal: 720 },
       },
