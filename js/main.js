@@ -1,4 +1,5 @@
 const mv = document.getElementById("mv");
+const mvRegular = document.getElementById("mv-regular");
 const customAR = document.getElementById("customAR");
 const playAnimBtn = document.getElementById("playAnim");
 const bgm = document.getElementById("bgm");
@@ -6,6 +7,9 @@ const btnGroup = document.getElementById("btnGroup");
 const visitBtn = document.getElementById("visitBtn");
 const textBanner = document.querySelector(".text-banner");
 const modelLoading = document.getElementById("model-loading");
+const cameraOverlay = document.getElementById("camera-overlay");
+const cameraVideo = document.getElementById("camera-video");
+const closeCameraBtn = document.getElementById("close-camera");
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 let firstAnim = null;
@@ -69,15 +73,20 @@ function updateContentForMonth(month) {
   const modelSrc = `module/source/month${month}/baby${month}.glb`;
   const iosSrc = `module/source/month${month}/baby${month}.usdz`;
 
+  // Update both model viewers
   mv.setAttribute("src", modelSrc);
   mv.setAttribute("ios-src", iosSrc);
   mv.setAttribute("alt", `BABY${month}M`);
+  
+  mvRegular.setAttribute("src", modelSrc);
+  mvRegular.setAttribute("ios-src", iosSrc);
+  mvRegular.setAttribute("alt", `BABY${month}M`);
 
   // Lock rotation for month 9, enable for other months
   if (month === 9) {
-    mv.removeAttribute("camera-controls");
+    mvRegular.removeAttribute("camera-controls");
   } else {
-    mv.setAttribute("camera-controls", "");
+    mvRegular.setAttribute("camera-controls", "");
   }
 
   // Update audio source with lazy loading
@@ -339,52 +348,89 @@ function hideVisitButtonForOneMinute() {
 // Start hiding the button when page loads
 hideVisitButtonForOneMinute();
 
+// Function to start camera overlay
+async function startCameraOverlay() {
+  try {
+    // Request camera access
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } 
+    });
+    
+    // Set video source
+    cameraVideo.srcObject = stream;
+    
+    // Show camera overlay
+    cameraOverlay.style.display = 'flex';
+    
+    // Start animation and audio
+    if (firstAnim) {
+      mv.animationName = firstAnim;
+      mv.animationLoop = true;
+      mv.currentTime = 0;
+      mv.play();
+    }
+    
+    // Play audio
+    if (bgm.src) {
+      bgm.pause();
+      bgm.currentTime = 0;
+      bgm.loop = true;
+      
+      if (!isAudioLoaded) {
+        bgm.load();
+        bgm.addEventListener(
+          "canplaythrough",
+          () => {
+            bgm.play().catch((err) => console.error("Không phát được nhạc:", err));
+          },
+          { once: true }
+        );
+      } else {
+        setTimeout(() => {
+          bgm.play().catch((err) => console.error("Không phát được nhạc:", err));
+        }, 100);
+      }
+    }
+    
+  } catch (err) {
+    console.error("Không thể truy cập camera:", err);
+    alert("Không thể truy cập camera. Vui lòng cho phép quyền truy cập camera.");
+  }
+}
+
+// Function to close camera overlay
+function closeCameraOverlay() {
+  // Stop camera stream
+  if (cameraVideo.srcObject) {
+    const tracks = cameraVideo.srcObject.getTracks();
+    tracks.forEach(track => track.stop());
+    cameraVideo.srcObject = null;
+  }
+  
+  // Hide overlay
+  cameraOverlay.style.display = 'none';
+  
+  // Pause audio
+  bgm.pause();
+  bgm.currentTime = 0;
+  bgm.loop = false;
+  
+  // Pause animation
+  if (mv.animationName) {
+    mv.pause();
+  }
+}
+
 customAR.addEventListener("click", async (event) => {
   event.preventDefault();
-
-  // Check AR support before activating
-  try {
-    const isARSupported = await checkARSupport();
-
-    if (!isARSupported) {
-      showARNotSupportedMessage();
-      return;
-    }
-
-    await mv.activateAR();
-    arActivated = true;
-  } catch (err) {
-    // Show error message if AR activation fails
-    showARNotSupportedMessage();
-  }
-
-  if (isIOS && bgm.paused) {
-    bgm.pause();
-    bgm.currentTime = 0;
-    bgm.loop = true; // Enable audio looping on iOS AR
-    // Load audio if not already loaded
-    if (!isAudioLoaded) {
-      bgm.load();
-      bgm.addEventListener(
-        "canplaythrough",
-        () => {
-          bgm
-            .play()
-            .catch((err) =>
-              console.error("Không phát được nhạc trên iOS:", err)
-            );
-        },
-        { once: true }
-      );
-    } else {
-      setTimeout(() => {
-        bgm
-          .play()
-          .catch((err) => console.error("Không phát được nhạc trên iOS:", err));
-      }, 100);
-    }
-  }
+  await startCameraOverlay();
 });
+
+closeCameraBtn.addEventListener("click", closeCameraOverlay);
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
@@ -398,87 +444,38 @@ window.addEventListener("pagehide", () => {
   bgm.currentTime = 0;
 });
 
-mv.addEventListener("load", () => {
-  const animations = mv.availableAnimations;
+// Handle model loading for regular viewer
+mvRegular.addEventListener("load", () => {
+  const animations = mvRegular.availableAnimations;
   isModelLoaded = true;
 
   // Hide loading indicator and show model
   hideModelLoading();
-  mv.style.opacity = "1";
-  mv.classList.add("loaded");
+  mvRegular.style.opacity = "1";
+  mvRegular.classList.add("loaded");
 
+  if (animations && animations.length > 0) {
+    firstAnim = animations[0];
+    mvRegular.animationName = firstAnim;
+    mvRegular.animationLoop = true;
+    mvRegular.pause();
+  } else {
+    console.log("Không tìm thấy animation trong mô hình.");
+  }
+});
+
+// Handle model loading for overlay viewer
+mv.addEventListener("load", () => {
+  const animations = mv.availableAnimations;
+  
   if (animations && animations.length > 0) {
     firstAnim = animations[0];
     mv.animationName = firstAnim;
     mv.animationLoop = true;
     mv.pause();
-  } else {
-    console.log("Không tìm thấy animation trong mô hình.");
   }
+});
 
-  mv.addEventListener("ar-status", (event) => {
-    console.log("AR status:", event.detail.status);
-    if (event.detail.status === "session-started") {
-      // Start animation automatically when AR session starts
-      if (firstAnim) {
-        mv.animationName = firstAnim;
-        mv.animationLoop = true;
-        mv.currentTime = 0;
-        mv.play();
-      }
-
-      // Set fixed position for AR model to prevent it from moving with camera
-      setTimeout(() => {
-        // Lock the model position in AR space
-        mv.setAttribute("ar-persist", "true");
-        mv.setAttribute("ar-scale", "0.4 0.4 0.4");
-
-        // Try to anchor the model to a fixed position
-        if (mv.model) {
-          // Set a fixed transform to keep the model in place
-          mv.model.matrixAutoUpdate = false;
-        }
-      }, 1000);
-
-      bgm.pause();
-      bgm.currentTime = 0;
-      bgm.loop = true; // Enable audio looping in AR mode
-      // Load audio if not already loaded
-      if (!isAudioLoaded) {
-        bgm.load();
-        bgm.addEventListener(
-          "canplaythrough",
-          () => {
-            bgm
-              .play()
-              .catch((err) => console.error("Không phát được nhạc:", err));
-          },
-          { once: true }
-        );
-      } else {
-        setTimeout(() => {
-          bgm
-            .play()
-            .catch((err) => console.error("Không phát được nhạc:", err));
-        }, 100);
-      }
-    } else if (event.detail.status === "not-presenting") {
-      // Pause audio when exiting AR
-      bgm.pause();
-      bgm.currentTime = 0;
-      bgm.loop = false; // Disable audio looping when exiting AR
-      mv.cameraOrbit = "45deg 90deg 2m";
-      // Reset play button state when exiting AR
-      isPlaying = false;
-      playAnimBtn.classList.remove("playing");
-      updatePlayButtonIcon();
-      showVisitButton();
-    }
-  });
-
-  if (mv.getAttribute("ar-status") !== "session-started") {
-    mv.setAttribute("ar-status", "not-presenting");
-  }
 
   // Add skeleton loading to buttons initially
   btnGroup.classList.add("loading");
@@ -507,11 +504,11 @@ playAnimBtn.addEventListener("click", () => {
   }
 
   if (!isPlaying) {
-    // Play animation
-    mv.animationName = firstAnim;
-    mv.animationLoop = true;
-    mv.currentTime = 0;
-    mv.play();
+    // Play animation on regular viewer
+    mvRegular.animationName = firstAnim;
+    mvRegular.animationLoop = true;
+    mvRegular.currentTime = 0;
+    mvRegular.play();
     isPlaying = true;
     playAnimBtn.classList.add("playing");
     updatePlayButtonIcon();
@@ -547,7 +544,7 @@ playAnimBtn.addEventListener("click", () => {
     }
   } else {
     // Pause animation
-    mv.pause();
+    mvRegular.pause();
     // Pause music when animation is paused
     bgm.pause();
     bgm.loop = false; // Disable audio looping when paused

@@ -268,15 +268,32 @@
       <div class="loading-text">Đang tải mô hình 3D...</div>
     </div>
 
+    <!-- Camera Overlay Container -->
+    <div id="camera-overlay" class="camera-overlay" style="display: none">
+      <video id="camera-video" autoplay muted playsinline></video>
+      <div class="baby-overlay">
+        <model-viewer
+          id="mv"
+          src=""
+          ios-src=""
+          alt=""
+          scale="0.3 0.3 0.3"
+          camera-orbit="45deg 90deg 2m"
+          touch-action="pan-x pan-y"
+          loading="lazy"
+          reveal="auto"
+          style="width: 100%; height: 100%"
+        >
+        </model-viewer>
+      </div>
+      <button id="close-camera" class="close-camera-btn">×</button>
+    </div>
+
+    <!-- Regular model viewer for non-AR mode -->
     <model-viewer
-      id="mv"
+      id="mv-regular"
       src=""
       ios-src=""
-      ar
-      ar-modes="webxr quick-look"
-      ar-scale="0.4 0.4 0.4"
-      ar-placement="floor"
-      ar-persist="true"
       alt=""
       scale="0.2 0.2 0.2"
       camera-controls
