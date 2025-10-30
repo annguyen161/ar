@@ -342,51 +342,85 @@ hideVisitButtonForOneMinute();
 customAR.addEventListener("click", async (event) => {
   event.preventDefault();
 
-  // Mở camera thông thường thay vì AR
+  // Logic kiểu AR-JS: mở camera nền + overlay model-viewer, xử lý audio theo iOS/Android
+  let stream = null;
+  let videoEl = null;
+  let closeBtn = null;
+  let fadeCover = null;
+  let iosTap = null;
+
+  const cleanup = () => {
+    try {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+      }
+    } catch (_) {}
+    if (videoEl && videoEl.parentNode) videoEl.parentNode.removeChild(videoEl);
+    if (closeBtn && closeBtn.parentNode)
+      closeBtn.parentNode.removeChild(closeBtn);
+    if (fadeCover && fadeCover.parentNode)
+      fadeCover.parentNode.removeChild(fadeCover);
+    if (iosTap && iosTap.parentNode) iosTap.parentNode.removeChild(iosTap);
+
+    // Khôi phục model-viewer
+    mv.style.cssText = "opacity: 1; transition: opacity 0.5s ease;";
+
+    // Dừng nhạc khi đóng
+    bgm.pause();
+    bgm.currentTime = 0;
+
+    // Hiện lại nút
+    customAR.style.display = "block";
+  };
+
   try {
-    // Yêu cầu quyền truy cập camera sau
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
+    // Bật camera sau (back)
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
     });
 
-    // Tạo video element để hiển thị camera
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    video.autoplay = true;
-    video.muted = true;
-    video.style.cssText = `
+    // Tạo nền camera toàn màn hình
+    videoEl = document.createElement("video");
+    videoEl.id = "cameraBg";
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.muted = true; // tránh bật audio camera
+    videoEl.srcObject = stream;
+    videoEl.style.cssText = `
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       object-fit: cover;
       z-index: 1000;
     `;
+    document.body.appendChild(videoEl);
 
-    // Đặt model ở trung tâm màn hình với kích thước lớn hơn
+    // Fade cover
+    fadeCover = document.createElement("div");
+    fadeCover.id = "fadeCover";
+    fadeCover.style.cssText = `
+      position: fixed; inset: 0; background:#000; z-index:1002; opacity:1; transition: opacity 1.2s ease;
+    `;
+    document.body.appendChild(fadeCover);
+
+    // Đặt model-viewer ở giữa, nổi trên camera
     mv.style.cssText = `
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 400px;
-      height: 400px;
+      width: min(90vw, 480px);
+      height: min(90vh, 480px);
+      background: transparent;
       z-index: 1001;
       opacity: 1;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+      touch-action: pan-y;
     `;
 
-    // Thêm video vào body
-    document.body.appendChild(video);
-
-    // Đảm bảo model được hiển thị và có animation
+    // Phát animation đầu tiên nếu có
     if (firstAnim) {
       mv.animationName = firstAnim;
       mv.animationLoop = true;
@@ -394,79 +428,74 @@ customAR.addEventListener("click", async (event) => {
       mv.play();
     }
 
-    // Ẩn button khi camera đã mở
+    // Ẩn nút xem AR khi đang hiển thị
     customAR.style.display = "none";
 
-    // Tạo button đóng camera
-    const closeCameraBtn = document.createElement("button");
-    closeCameraBtn.innerHTML = "Đóng Camera";
-    closeCameraBtn.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1002;
-      background: #FF6B6B;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    `;
-
-    closeCameraBtn.addEventListener("click", () => {
-      // Dừng stream camera
-      stream.getTracks().forEach((track) => track.stop());
-
-      // Xóa video và button
-      document.body.removeChild(video);
-      document.body.removeChild(closeCameraBtn);
-
-      // Khôi phục model về vị trí ban đầu
-      mv.style.cssText = `
-        opacity: 1;
-        transition: opacity 0.5s ease;
-        position: relative;
-        width: auto;
-        height: auto;
-        transform: none;
-        background: none;
-        border-radius: 0;
-        box-shadow: none;
-      `;
-
-      // Hiện lại button
-      customAR.style.display = "block";
-    });
-
-    document.body.appendChild(closeCameraBtn);
-
-    // Phát nhạc khi mở camera
-    if (bgm.src) {
-      bgm.pause();
-      bgm.currentTime = 0;
-      bgm.loop = true;
-
+    // Xử lý audio theo AR-JS
+    const tryPlayAudio = () => {
+      if (!bgm.src) return Promise.resolve();
+      bgm.muted = false;
+      bgm.volume = 1.0;
       if (!isAudioLoaded) {
         bgm.load();
-        bgm.addEventListener(
-          "canplaythrough",
-          () => {
-            bgm
-              .play()
-              .catch((err) => console.error("Không phát được nhạc:", err));
-          },
-          { once: true }
-        );
-      } else {
+      }
+      return bgm.play();
+    };
+
+    const onAfterAudioResolved = () => {
+      // Bỏ fade
+      requestAnimationFrame(() => {
+        fadeCover.style.opacity = "0";
         setTimeout(() => {
+          if (fadeCover && fadeCover.parentNode)
+            fadeCover.parentNode.removeChild(fadeCover);
+          fadeCover = null;
+        }, 600);
+      });
+    };
+
+    // iOS cần tương tác để phát audio. Ta thử phát, nếu fail thì hiện overlay nhắc chạm.
+    tryPlayAudio()
+      .then(onAfterAudioResolved)
+      .catch(() => {
+        iosTap = document.createElement("div");
+        iosTap.id = "iosTap";
+        iosTap.textContent = "👆 Nhấn để bắt đầu";
+        iosTap.style.cssText = `
+          position: fixed; inset: 0; background: rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; font-size: 1.3rem; z-index:1003; font-family: sans-serif; transition: opacity .6s ease;
+        `;
+        document.body.appendChild(iosTap);
+        iosTap.addEventListener("click", () => {
+          bgm.muted = false;
+          bgm.volume = 1.0;
           bgm
             .play()
-            .catch((err) => console.error("Không phát được nhạc:", err));
-        }, 100);
-      }
-    }
+            .then(() => {
+              iosTap.style.opacity = "0";
+              setTimeout(() => {
+                if (iosTap && iosTap.parentNode)
+                  iosTap.parentNode.removeChild(iosTap);
+                iosTap = null;
+                onAfterAudioResolved();
+              }, 300);
+            })
+            .catch(() => {
+              // vẫn bỏ fade để tiếp tục trải nghiệm không âm thanh
+              onAfterAudioResolved();
+            });
+        });
+        // Bỏ lớp fade sớm nếu overlay đã hiện
+        onAfterAudioResolved();
+      });
+
+    // Nút đóng
+    closeBtn = document.createElement("button");
+    closeBtn.textContent = "Đóng";
+    closeBtn.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 1004; background:#FF6B6B; color:#fff; border:none; padding:12px 20px; border-radius:24px; font-weight:600; cursor:pointer;
+    `;
+    closeBtn.addEventListener("click", cleanup);
+    document.body.appendChild(closeBtn);
   } catch (err) {
     console.error("Không thể mở camera:", err);
     alert("Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.");
