@@ -276,7 +276,7 @@ select {
   pointer-events: none;
   z-index: 1;
   opacity: 0;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+  /* Removed drop-shadow to avoid black edges on iOS/Safari */
   transition: opacity 0.8s ease, transform 0.8s ease;
   transform: translateY(20px);
 }
@@ -318,10 +318,6 @@ select {
   transition-delay: 1s;
 }
 
-.floating-element svg {
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
-}
-
 /* Stars */
 .star-large {
   top: 15%;
@@ -349,7 +345,7 @@ select {
   right: 8%;
   animation: floatAround 16s ease-in-out infinite,
     twinkle 3.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(255, 182, 193, 0.8));
+  /* Removed drop-shadow */
 }
 
 .heart-medium {
@@ -357,7 +353,7 @@ select {
   left: 5%;
   animation: floatAround 18s ease-in-out infinite reverse,
     twinkle 4.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 192, 203, 0.7));
+  /* Removed drop-shadow */
 }
 
 .heart-small {
@@ -365,7 +361,7 @@ select {
   right: 15%;
   animation: floatAround 14s ease-in-out infinite,
     twinkle 2.8s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(255, 182, 193, 0.6));
+  /* Removed drop-shadow */
 }
 
 .heart-tiny {
@@ -373,7 +369,7 @@ select {
   left: 20%;
   animation: floatAround 20s ease-in-out infinite reverse,
     twinkle 3.8s ease-in-out infinite;
-  filter: drop-shadow(0 0 4px rgba(255, 192, 203, 0.5));
+  /* Removed drop-shadow */
 }
 
 /* Circles */
@@ -415,7 +411,7 @@ select {
     rgba(255, 182, 193, 0.6) 50%,
     rgba(255, 192, 203, 0.3) 100%
   );
-  box-shadow: 0 0 15px rgba(255, 182, 193, 0.5);
+  /* Removed box-shadow glow to avoid dark artifacts on some devices */
 }
 
 .circle-large .circle {
@@ -443,11 +439,10 @@ select {
   top: 10%;
   right: 8%;
   animation: moonFloat 25s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+  /* Removed drop-shadow */
 }
 
 .moon:hover {
-  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 1));
   transform: scale(1.1);
 }
 
@@ -456,42 +451,42 @@ select {
   top: 5%;
   left: 5%;
   animation: cloudDrift 30s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+  /* Removed drop-shadow */
 }
 
 .cloud-medium {
   top: 35%;
   right: 5%;
   animation: cloudDrift 25s linear infinite reverse;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
+  /* Removed drop-shadow */
 }
 
 .cloud-small {
   top: 55%;
   left: 10%;
   animation: cloudDrift 20s linear infinite;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+  /* Removed drop-shadow */
 }
 
 .cloud-tiny {
   top: 75%;
   right: 20%;
   animation: cloudDrift 35s linear infinite reverse;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+  /* Removed drop-shadow */
 }
 
 .cloud-extra1 {
   top: 20%;
   left: 60%;
   animation: cloudDrift 40s linear infinite;
-  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.35));
+  /* Removed drop-shadow */
 }
 
 .cloud-extra2 {
   top: 65%;
   left: 5%;
   animation: cloudDrift 28s linear infinite reverse;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.25));
+  /* Removed drop-shadow */
 }
 
 @keyframes floatAround {
@@ -555,7 +550,8 @@ select {
   animation-play-state: paused;
   transform: scale(1.2);
   opacity: 1;
-  filter: brightness(1.5) drop-shadow(0 0 12px rgba(255, 255, 255, 1));
+  /* Removed drop-shadow portion to avoid artifacts */
+  filter: none;
 }
 
 /* Special effects for hearts */
@@ -566,7 +562,8 @@ select {
   animation-play-state: paused;
   transform: scale(1.3);
   opacity: 1;
-  filter: brightness(1.4) drop-shadow(0 0 15px rgba(255, 182, 193, 1));
+  /* Removed drop-shadow portion to avoid artifacts */
+  filter: none;
 }
 
 /* Special effects for circles */
@@ -593,21 +590,6 @@ select {
 }
 
 /* Enhanced star glow effects */
-.star-large {
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
-}
-
-.star-medium {
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
-}
-
-.star-small {
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
-}
-
-.star-tiny {
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
-}
 
 /* Twinkling effect for stars */
 @keyframes twinkle {
