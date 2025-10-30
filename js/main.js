@@ -412,8 +412,8 @@ customAR.addEventListener("click", async (event) => {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: min(90vw, 480px);
-      height: min(90vh, 480px);
+      width: 100vw;
+      height: 100vh;
       background: transparent;
       z-index: 1001;
       opacity: 1;
