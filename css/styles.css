@@ -802,8 +802,8 @@ model-viewer[ar-status="session-started"] {
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  width: 300px !important;
-  height: 300px !important;
+  width: min(95vw, 95vh) !important;
+  height: min(95vw, 95vh) !important;
   z-index: 1000 !important;
   pointer-events: none !important;
 }
@@ -819,8 +819,8 @@ model-viewer[ar-status="session-started"] model-viewer {
 /* AR Model positioning - keep model centered in AR space */
 model-viewer[ar-status="session-started"] {
   position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
+  width: min(95vw, 95vh) !important;
+  height: min(95vw, 95vh) !important;
   z-index: 1000 !important;
   background: transparent !important;
 }
@@ -1265,24 +1265,24 @@ model-viewer {
   }
 
   /* Mobile responsive for model-viewer overlay */
-  model-viewer {
-    width: 250px !important;
-    height: 250px !important;
+  model-viewer[ar-status="session-started"] {
+    width: min(95vw, 95vh) !important;
+    height: min(95vw, 95vh) !important;
   }
 }
 
 @media (max-width: 480px) {
   /* Smaller mobile screens */
-  model-viewer {
-    width: 200px !important;
-    height: 200px !important;
+  model-viewer[ar-status="session-started"] {
+    width: min(95vw, 95vh) !important;
+    height: min(95vw, 95vh) !important;
   }
 }
 
 @media (max-width: 360px) {
   /* Very small screens */
-  model-viewer {
-    width: 180px !important;
-    height: 180px !important;
+  model-viewer[ar-status="session-started"] {
+    width: min(95vw, 95vh) !important;
+    height: min(95vw, 95vh) !important;
   }
 }
